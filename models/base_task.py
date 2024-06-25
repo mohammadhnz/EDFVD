@@ -1,3 +1,5 @@
+import json
+
 import configs
 
 
@@ -29,3 +31,6 @@ class BaseTask:
     def is_active(self, current):
         if self.current_job * self.period > current:
             return True
+
+    def __repr__(self):
+        return json.dumps(self.to_dict())
