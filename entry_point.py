@@ -17,3 +17,6 @@ def initialize():
         assert min([item.little_computation_time for item in hc_tasks]) > 0
         assert min([item.big_computation_time for item in hc_tasks]) > 0
         assert min([item.computation_time for item in lc_tasks]) > 0
+
+        count_of_resources = int(data["count_of_resources"])
+        resources = algorithms.generate_resources(count_of_resources)
