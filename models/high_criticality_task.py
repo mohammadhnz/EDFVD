@@ -11,10 +11,11 @@ class HighCriticalityTask(BaseTask):
         self.virtual_deadline = None
 
     def get_deadline(self, mode: configs.Mode):
+        release_time = self.current_job * self.period
         if mode == configs.Mode.NORMAL:
-            return self.deadline
+            return release_time + self.deadline
         else:
-            return self.virtual_deadline
+            return release_time + self.virtual_deadline
 
     def get_computation_time(self, mode: configs.Mode):
         if mode == configs.Mode.NORMAL:

@@ -1,3 +1,4 @@
+import math
 from typing import List
 
 import configs
@@ -11,6 +12,7 @@ class Simulator:
         self.low_criticality_queue: List[LowCriticalityTask] = []
         self.current_time = 0
         self.edf_vd_x = self._get_edf_vd_x()
+        self._update_high_critical_tasks()
 
     def _get_edf_vd_x(self):
         u_lo_lo, u_lo_hi = 0, 0
@@ -43,3 +45,7 @@ class Simulator:
 
     def _handle_done_tasks(self):
         pass
+
+    def _update_high_critical_tasks(self):
+        for high_criticality_task in self.high_criticality_queue:
+            high_criticality_task.virtual_deadline = math.ceil(self.edf_vd_x * high_criticality_task.deadline)
