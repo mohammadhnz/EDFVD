@@ -12,3 +12,10 @@ class LowCriticalityTask(BaseTask):
 
     def get_computation_time(self, mode: configs.Mode):
         return self.computation_time
+
+    def to_dict(self):
+        return {
+            "type": "LowCriticalityTask",
+            "computation_time": self.computation_time,
+            "period": self.period,
+        }

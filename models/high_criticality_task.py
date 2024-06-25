@@ -1,3 +1,5 @@
+import json
+
 import configs
 from . import BaseTask
 
@@ -22,3 +24,11 @@ class HighCriticalityTask(BaseTask):
             return self.little_computation_time
         else:
             return self.big_computation_time
+
+    def to_dict(self):
+        return {
+            "type": "HighCriticalityTask",
+            "little_computation_time": self.little_computation_time,
+            "big_computation_time": self.big_computation_time,
+            "period": self.period,
+        }
