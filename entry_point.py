@@ -24,7 +24,7 @@ def initialize():
         resources = generate_resources(count_of_resources)
 
         hc_tasks, lc_tasks = add_resource_usage(hc_tasks, lc_tasks, resources)
-        cores = [Core() for i in range(count_of_cores)]
+        cores = [Core(core_utilization) for i in range(count_of_cores)]
         simulator = Simulator(hc_tasks, lc_tasks, resources, cores)
         simulator.execute()
 

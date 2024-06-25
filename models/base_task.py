@@ -12,10 +12,13 @@ class BaseTask:
         self.current_job = 0
         self.spent_calculation_time = 0
 
+    def get_utilization(self):
+        return self.get_computation_time(configs.Mode.NORMAL) / self.period
+
     def get_deadline(self, mode: configs.Mode) -> int:
         pass
 
-    def get_computation_time(self, mode: configs.Mode):
+    def get_computation_time(self, mode: configs.Mode) -> int:
         pass
 
     def is_deadline_missed(self, mode: configs.Mode, current_time: int):

@@ -29,7 +29,7 @@ class Simulator:
         return round(edf_vd_x, 2)
 
     def execute(self):
-        while self.current_time < 10 ** 6:
+        while self.current_time < 10 ** 5:
             self._update_system_preemption_level()
             self._update_mode()
             self._handle_done_tasks()
@@ -100,14 +100,16 @@ class Simulator:
                 not_assigned_tasks.append(task)
 
         for task in not_assigned_tasks:
+            usable_cores = []
             for core, cr_task in self.currently_assigned_tasks.items():
                 if not cr_task:
-                    self.currently_assigned_tasks[core] = task
-                    self._update_system_preemption_level()
-                    break
-                if task.get_deadline(self.mode) < cr_task.get_deadline(self.mode):
-                    self.currently_assigned_tasks[core] = task
-                    break
+                    usable_cores.append(core)
+                elif task.get_deadline(self.mode) < cr_task.get_deadline(self.mode):
+                    usable_cores.append(core)
+            usable_cores = sorted(usable_cores, key=lambda core: self._calculate_congestion(core, task), reverse=True)
+            usable_cores = [core for core in usable_cores if task.get_utilization() <= core.utilization - core.wfd]
+            if usable_cores:
+                self.currently_assigned_tasks[usable_cores[0]] = task
 
     def _advance_forward_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
@@ -140,3 +142,7 @@ class Simulator:
         min(
             [task.get_preemption_level(self.srp_table) for _, task in self.currently_assigned_tasks.items() if task] + [math.inf]
         )
+
+    def _calculate_congestion(self, core, task):
+        resources = [resource for resource, count in task.resource_demands.items() if count > 0]
+        return sum([core.resource_congestion[resource] for resource in resources])
