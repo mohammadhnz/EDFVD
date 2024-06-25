@@ -9,3 +9,9 @@ class HighCriticalityTask(BaseTask):
         self.big_computation_time = big_computation_time
         self.period = period
         self.virtual_deadline = None
+
+    def get_deadline(self, mode: configs.Mode):
+        if mode == configs.Mode.NORMAL:
+            return self.deadline
+        else:
+            return self.virtual_deadline
