@@ -13,3 +13,7 @@ def initialize():
         ratio = float(data["ratio"])
 
         hc_tasks, lc_tasks = algorithms.generate_task(core_utilization, count_of_cores, count_of_tasks, ratio)
+
+        assert min([item.little_computation_time for item in hc_tasks]) > 0
+        assert min([item.big_computation_time for item in hc_tasks]) > 0
+        assert min([item.computation_time for item in lc_tasks]) > 0
