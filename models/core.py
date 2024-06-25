@@ -10,6 +10,7 @@ class Core:
         self.resource_congestion = defaultdict(float)
         self.current_task: Union[BaseTask, None] = None
         self.utilization = utilization
+
     @property
     def wfd(self):
         return sum([task.get_utilization() for task in self.task_history])

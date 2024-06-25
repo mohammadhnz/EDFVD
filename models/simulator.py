@@ -29,13 +29,14 @@ class Simulator:
         return round(edf_vd_x, 2)
 
     def execute(self):
-        while self.current_time < 10 ** 5:
+        while self.current_time < 10 ** 4:
             self._update_system_preemption_level()
             self._update_mode()
             self._handle_done_tasks()
             tasks = self._get_scheduled_tasks()
             self.assign_to_core(tasks)
             self.current_time += 1
+        return sum(core.wfd for core in self.currently_assigned_tasks.keys())
 
     def _get_scheduled_tasks(self):
         tasks = self._get_tasks_by_deadline_ordering()
@@ -49,18 +50,18 @@ class Simulator:
     def _handle_done_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
             if isinstance(task, BaseTask) and task.is_finished(self.mode):
-                print("Done task", "current_job", str(task.current_job), task)
+                # print("Done task", "current_job", str(task.current_job), task)
                 task.advanced_forward_job()
                 self.currently_assigned_tasks[core] = None
             elif isinstance(task, BaseTask) and task.is_deadline_missed(self.mode, self.current_time):
                 if isinstance(task, HighCriticalityTask):
-                    print(self.current_time)
-                    print(self.mode)
-                    print(task.virtual_deadline)
+                    # print(self.current_time)
+                    # print(self.mode)
+                    # print(task.virtual_deadline)
                     raise Exception('Panic Mode')
                 self.currently_assigned_tasks[core] = None
                 task.advanced_forward_job()
-                print("Missed deadline", task)
+                # print("Missed deadline", task)
 
     def _get_tasks_by_deadline_ordering(self):
         high_criticality_queue = list(
@@ -110,6 +111,7 @@ class Simulator:
             usable_cores = [core for core in usable_cores if task.get_utilization() <= core.utilization - core.wfd]
             if usable_cores:
                 self.currently_assigned_tasks[usable_cores[0]] = task
+                usable_cores[0].add_task(task)
 
     def _advance_forward_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
