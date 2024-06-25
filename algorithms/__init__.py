@@ -1,1 +1,1 @@
-from uunifast import generate_task
+from .uunifast import generate_task
