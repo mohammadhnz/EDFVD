@@ -15,9 +15,9 @@ class HighCriticalityTask(BaseTask):
     def get_deadline(self, mode: configs.Mode):
         release_time = self.current_job * self.period
         if mode == configs.Mode.NORMAL:
-            return release_time + self.deadline
-        else:
             return release_time + self.virtual_deadline
+        else:
+            return release_time + self.period
 
     def get_computation_time(self, mode: configs.Mode):
         if mode == configs.Mode.NORMAL:

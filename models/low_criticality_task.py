@@ -8,7 +8,7 @@ class LowCriticalityTask(BaseTask):
         self.computation_time = computation_time
 
     def get_deadline(self, mode: configs.Mode):
-        return self.current_job * self.period + self.deadline
+        return self.current_job * self.period + self.period
 
     def get_computation_time(self, mode: configs.Mode):
         return self.computation_time

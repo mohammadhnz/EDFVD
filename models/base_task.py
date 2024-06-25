@@ -28,8 +28,8 @@ class BaseTask:
         if self.get_computation_time(mode) == self.spent_calculation_time:
             return True
 
-    def is_active(self, current):
-        if self.current_job * self.period > current:
+    def is_active(self, current_time):
+        if self.current_job * self.period >= current_time:
             return True
 
     def __repr__(self):

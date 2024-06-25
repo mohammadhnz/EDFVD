@@ -6,13 +6,13 @@ from models import HighCriticalityTask, LowCriticalityTask, BaseTask
 
 
 class Simulator:
-    def __init__(self, high_criticality_tasks, low_criticality_tasks, resources):
+    def __init__(self, high_criticality_tasks, low_criticality_tasks, resources, cpu_count):
         self.mode = configs.Mode.NORMAL
         self.high_criticality_tasks = high_criticality_tasks
         self.low_criticality_tasks = low_criticality_tasks
         self.resources = resources
         self.current_time = 0
-        self.cpu_count = 0
+        self.cpu_count = cpu_count
         self.edf_vd_x = self._get_edf_vd_x()
         self._update_high_critical_tasks()
         self.currently_assigned_tasks = [None for i in range(self.cpu_count)]
@@ -33,6 +33,7 @@ class Simulator:
             tasks = self._get_scheduled_tasks()
             self.assign_to_core(tasks)
             self.current_time += 1
+            print(*self.currently_assigned_tasks)
 
     def _get_scheduled_tasks(self):
         tasks = self._get_tasks_by_deadline_ordering()
@@ -52,10 +53,10 @@ class Simulator:
 
     def _get_tasks_by_deadline_ordering(self):
         high_criticality_queue = list(
-            filter(lambda task: task.is_active(), self.high_criticality_tasks)
+            filter(lambda task: task.is_active(self.current_time), self.high_criticality_tasks)
         )
         low_criticality_queue = list(
-            filter(lambda task: task.is_active(), self.low_criticality_tasks)
+            filter(lambda task: task.is_active(self.current_time), self.low_criticality_tasks)
         )
         if self.mode == configs.Mode.NORMAL:
             return sorted(high_criticality_queue + low_criticality_queue, key=lambda task: task.get_deadline(self.mode))
@@ -72,12 +73,13 @@ class Simulator:
         self._advance_forward_tasks()
 
     def _disable_low_critical_tasks_in_overrun(self):
-        if self.mode == configs.Mode.OVERRUN:
-            for i in range(self.cpu_count):
-                if not self.currently_assigned_tasks[i]:
-                    continue
-                if isinstance(self.currently_assigned_tasks[i], LowCriticalityTask):
-                    self.currently_assigned_tasks[i] = None
+        if self.mode != configs.Mode.OVERRUN:
+            return
+        for i in range(self.cpu_count):
+            if not self.currently_assigned_tasks[i]:
+                continue
+            if isinstance(self.currently_assigned_tasks[i], LowCriticalityTask):
+                self.currently_assigned_tasks[i] = None
 
     def _assign_scheduled_tasks(self, tasks):
         not_assigned_tasks = []
@@ -87,7 +89,7 @@ class Simulator:
         for task in not_assigned_tasks:
             for index in range(len(self.currently_assigned_tasks)):
                 currently_assigned_task = self.currently_assigned_tasks[index]
-                if (not currently_assigned_task) or (task.get_deadline() < currently_assigned_task.get_deadline()):
+                if (not currently_assigned_task) or (task.get_deadline(self.mode) < currently_assigned_task.get_deadline(self.mode)):
                     self.currently_assigned_tasks[index] = task
                     break
 
@@ -99,11 +101,11 @@ class Simulator:
 
     def _update_high_critical_tasks(self):
         for high_criticality_task in self.high_criticality_tasks:
-            high_criticality_task.virtual_deadline = math.ceil(self.edf_vd_x * high_criticality_task.deadline)
+            high_criticality_task.virtual_deadline = math.ceil(self.edf_vd_x * high_criticality_task.period)
 
     def _update_mode(self):
         for task in self.high_criticality_tasks:
-            if task.is_active() and task.virtual_deadline <= self.current_time:
+            if task.is_active(self.current_time) and task.virtual_deadline <= self.current_time:
                 self.mode = configs.Mode.OVERRUN
                 return
         self.mode = configs.Mode.NORMAL
