@@ -7,6 +7,7 @@ class BaseTask:
     def __init__(self, period: int, criticality: configs.CriticalityValues):
         self.period = period
         self.criticality = criticality
+        self.resource_demands = []
         self.deadline = None
         self.current_job = 0
         self.spent_calculation_time = 0

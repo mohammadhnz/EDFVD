@@ -1,6 +1,6 @@
 import json
 
-from algorithms import generate_task, generate_resources
+from algorithms import generate_task, generate_resources, add_resource_usage
 from models import Simulator
 import configs
 
@@ -22,6 +22,6 @@ def initialize():
         count_of_resources = int(data["count_of_resources"])
         resources = generate_resources(count_of_resources)
 
-        # TODO: Add resource usage for each task.
+        hc_tasks, lc_tasks = add_resource_usage(hc_tasks, lc_tasks, resources)
 
-        simulator = Simulator()
+        simulator = Simulator(hc_tasks, lc_tasks, resources, count_of_cores)
