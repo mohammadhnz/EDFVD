@@ -6,16 +6,18 @@ from models import HighCriticalityTask, LowCriticalityTask, BaseTask
 
 
 class Simulator:
-    def __init__(self, high_criticality_tasks, low_criticality_tasks, resources, cpu_count):
+    def __init__(self, high_criticality_tasks, low_criticality_tasks, resources, cores):
         self.mode = configs.Mode.NORMAL
         self.high_criticality_tasks = high_criticality_tasks
         self.low_criticality_tasks = low_criticality_tasks
         self.resources = resources
         self.current_time = 0
-        self.cpu_count = cpu_count
+        self.cpu_count = len(cores)
         self.edf_vd_x = self._get_edf_vd_x()
         self._update_high_critical_tasks()
-        self.currently_assigned_tasks = [None for i in range(self.cpu_count)]
+        self.currently_assigned_tasks = {core: None for core in cores}
+        self.srp_table = self._generate_srp_table()
+        self.system_preemption_level = math.inf
 
     def _get_edf_vd_x(self):
         u_lo_lo, u_lo_hi = 0, 0
@@ -27,29 +29,38 @@ class Simulator:
         return round(edf_vd_x, 2)
 
     def execute(self):
-        while self.current_time < 10 ** 9:
+        while self.current_time < 10 ** 6:
+            self._update_system_preemption_level()
             self._update_mode()
             self._handle_done_tasks()
             tasks = self._get_scheduled_tasks()
             self.assign_to_core(tasks)
             self.current_time += 1
-            print(*self.currently_assigned_tasks)
 
     def _get_scheduled_tasks(self):
         tasks = self._get_tasks_by_deadline_ordering()
         tasks = list(
             filter(
-                self._is_task_eligible_by_msrp, tasks
+                lambda task: task.get_preemption_level(self.srp_table) < self.system_preemption_level, tasks
             )
         )
         return tasks
 
     def _handle_done_tasks(self):
-        for i in range(len(self.currently_assigned_tasks)):
-            task = self.currently_assigned_tasks[i]
+        for core, task in self.currently_assigned_tasks.items():
             if isinstance(task, BaseTask) and task.is_finished(self.mode):
+                print("Done task", "current_job", str(task.current_job), task)
                 task.advanced_forward_job()
-                self.currently_assigned_tasks[i] = None
+                self.currently_assigned_tasks[core] = None
+            elif isinstance(task, BaseTask) and task.is_deadline_missed(self.mode, self.current_time):
+                if isinstance(task, HighCriticalityTask):
+                    print(self.current_time)
+                    print(self.mode)
+                    print(task.virtual_deadline)
+                    raise Exception('Panic Mode')
+                self.currently_assigned_tasks[core] = None
+                task.advanced_forward_job()
+                print("Missed deadline", task)
 
     def _get_tasks_by_deadline_ordering(self):
         high_criticality_queue = list(
@@ -75,26 +86,31 @@ class Simulator:
     def _disable_low_critical_tasks_in_overrun(self):
         if self.mode != configs.Mode.OVERRUN:
             return
-        for i in range(self.cpu_count):
-            if not self.currently_assigned_tasks[i]:
+        for core, task in self.currently_assigned_tasks.items():
+            if not task:
                 continue
-            if isinstance(self.currently_assigned_tasks[i], LowCriticalityTask):
-                self.currently_assigned_tasks[i] = None
+            if isinstance(task, LowCriticalityTask):
+                self.currently_assigned_tasks[core] = None
 
     def _assign_scheduled_tasks(self, tasks):
         not_assigned_tasks = []
+        currently_assigned_tasks = list(self.currently_assigned_tasks.values())
         for task in tasks:
-            if task not in self.currently_assigned_tasks:
+            if task not in currently_assigned_tasks:
                 not_assigned_tasks.append(task)
+
         for task in not_assigned_tasks:
-            for index in range(len(self.currently_assigned_tasks)):
-                currently_assigned_task = self.currently_assigned_tasks[index]
-                if (not currently_assigned_task) or (task.get_deadline(self.mode) < currently_assigned_task.get_deadline(self.mode)):
-                    self.currently_assigned_tasks[index] = task
+            for core, cr_task in self.currently_assigned_tasks.items():
+                if not cr_task:
+                    self.currently_assigned_tasks[core] = task
+                    self._update_system_preemption_level()
+                    break
+                if task.get_deadline(self.mode) < cr_task.get_deadline(self.mode):
+                    self.currently_assigned_tasks[core] = task
                     break
 
     def _advance_forward_tasks(self):
-        for task in self.currently_assigned_tasks:
+        for core, task in self.currently_assigned_tasks.items():
             if not task:
                 continue
             task.calculate()
@@ -109,3 +125,18 @@ class Simulator:
                 self.mode = configs.Mode.OVERRUN
                 return
         self.mode = configs.Mode.NORMAL
+
+    def _generate_srp_table(self):
+        srp_table = dict()
+        total_tasks = self.high_criticality_tasks + self.low_criticality_tasks
+        max_period = max([item.period for item in total_tasks])
+        for resource in self.resources:
+            srp_table[resource] = [
+                min([task.period for task in total_tasks if task.resource_demands[resource] > i] + [max_period]) for i in range(resource.capacity + 1)
+            ]
+        return srp_table
+
+    def _update_system_preemption_level(self):
+        min(
+            [task.get_preemption_level(self.srp_table) for _, task in self.currently_assigned_tasks.items() if task] + [math.inf]
+        )

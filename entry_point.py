@@ -3,6 +3,7 @@ import json
 from algorithms import generate_task, generate_resources, add_resource_usage
 from models import Simulator
 import configs
+from models.core import Core
 
 
 def initialize():
@@ -23,8 +24,8 @@ def initialize():
         resources = generate_resources(count_of_resources)
 
         hc_tasks, lc_tasks = add_resource_usage(hc_tasks, lc_tasks, resources)
-
-        simulator = Simulator(hc_tasks, lc_tasks, resources, count_of_cores)
+        cores = [Core() for i in range(count_of_cores)]
+        simulator = Simulator(hc_tasks, lc_tasks, resources, cores)
         simulator.execute()
 
 initialize()
