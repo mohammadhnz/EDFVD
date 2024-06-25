@@ -25,3 +25,6 @@ def initialize():
         hc_tasks, lc_tasks = add_resource_usage(hc_tasks, lc_tasks, resources)
 
         simulator = Simulator(hc_tasks, lc_tasks, resources, count_of_cores)
+        simulator.execute()
+
+initialize()

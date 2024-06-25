@@ -17,7 +17,7 @@ def generate_task(core_utilization, count_of_cores, count_of_tasks, ratio) -> (L
     for u in hc_utilization:
         period = random.randint(10 ** 7, 2 * 10 ** 7)
         little_computation_time = int(u * period)
-        big_computation_time = random.randint(little_computation_time, period)
+        big_computation_time = random.randint(little_computation_time, 2 * little_computation_time)
         hc_task = HighCriticalityTask(little_computation_time, big_computation_time, period)
         hc_tasks.append(hc_task)
 
