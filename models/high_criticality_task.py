@@ -3,7 +3,7 @@ from . import BaseTask
 
 
 class HighCriticalityTask(BaseTask):
-    def __init(self, little_computation_time: int, big_computation_time: int, period: int):
+    def __init__(self, little_computation_time: int, big_computation_time: int, period: int):
         super(HighCriticalityTask, self).__init__(period, configs.CriticalityValues.HIGH)
         self.little_computation_time = little_computation_time
         self.big_computation_time = big_computation_time
