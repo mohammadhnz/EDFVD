@@ -9,3 +9,6 @@ class BaseTask:
 
     def get_deadline(self, mode: configs.Mode):
         pass
+
+    def get_computation_time(self, mode: configs.Mode):
+        pass

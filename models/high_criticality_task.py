@@ -15,3 +15,9 @@ class HighCriticalityTask(BaseTask):
             return self.deadline
         else:
             return self.virtual_deadline
+
+    def get_computation_time(self, mode: configs.Mode):
+        if mode == configs.Mode.NORMAL:
+            return self.little_computation_time
+        else:
+            return self.big_computation_time

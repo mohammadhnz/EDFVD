@@ -10,3 +10,5 @@ class LowCriticalityTask(BaseTask):
     def get_deadline(self, mode: configs.Mode):
         return self.deadline
 
+    def get_computation_time(self, mode: configs.Mode):
+        return self.computation_time
