@@ -25,26 +25,15 @@ def generate_task(total_utilization, number_of_tasks, ratio) -> (List[HighCritic
         period = random.randint(10000, 20000)
         little_computation_time = int(u * period)
         big_computation_time = random.randint(little_computation_time, period)
-        #hc_task = HighCriticalityTask(little_computation_time, big_computation_time, period)
-        print(u)
-        print(little_computation_time)
-        print(big_computation_time)
-        print(period)
-        print("------")
-        #hc_tasks.append(hc_task)
+        hc_task = HighCriticalityTask(little_computation_time, big_computation_time, period)
+        hc_tasks.append(hc_task)
 
     lc_tasks = []
     for u in lc_utilization:
-        period = random.randint(10000, 20000)
+        period = random.randint(100000, 200000)
         computation_time = int(u * period)
+        lc_task = LowCriticalityTask(computation_time, period)
+        lc_tasks.append(lc_task)
 
+    return hc_tasks, lc_tasks
 
-
-    # for task in hc_tasks:
-    #     print(task.little_computation_time)
-    #     print(task.big_computation_time)
-    #     print(task.period)
-
-
-if __name__ == "__main__":
-    generate_task(2, 400, 0.9)
