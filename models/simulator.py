@@ -25,25 +25,40 @@ class Simulator:
 
     def execute(self):
         while True:
-            self._schedule_task()
+            task = self._schedule_tasks()
+            self.assign_to_core(task)
             self.current_time += 1
 
-    def _schedule_task(self, current_time):
+    def _schedule_tasks(self):
         self._handle_done_tasks()
         tasks = self._get_tasks_by_deadline_ordering()
-
-    def _get_tasks_by_deadline_ordering(self):
-        if self.mode == configs.Mode.NORMAL:
-            return sorted(self.high_criticality_queue + self.low_criticality_queue, key=lambda task: task.deadline)
-        return sorted(self.high_criticality_queue, key=lambda task: task.period)
-
-    def _filter_eligible_tasks(self):
-        pass
-
-    def assign_to_core(self):
-        pass
+        tasks = list(
+            filter(
+                self._is_task_eligible_by_msrp, tasks
+            )
+        )
+        return tasks[0]
 
     def _handle_done_tasks(self):
+        for task in self.high_criticality_queue + self.low_criticality_queue:
+            if task.is_finished(self.mode):
+                task.advanced_forward_job()
+
+    def _get_tasks_by_deadline_ordering(self):
+        high_criticality_queue = list(
+            filter(lambda task: task.is_active(), self.high_criticality_queue)
+        )
+        low_criticality_queue = list(
+            filter(lambda task: task.is_active(), self.low_criticality_queue)
+        )
+        if self.mode == configs.Mode.NORMAL:
+            return sorted(high_criticality_queue + low_criticality_queue, key=lambda task: task.get_deadline(self.mode))
+        return sorted(high_criticality_queue, key=lambda task: task.get_deadline(self.mode))
+
+    def _is_task_eligible_by_msrp(self, task):
+        return True
+
+    def assign_to_core(self, task):
         pass
 
     def _update_high_critical_tasks(self):

@@ -7,9 +7,25 @@ class BaseTask:
         self.criticality = criticality
         self.deadline = period
         self.current_job = 0
+        self.spent_calculation_time = 0
 
     def get_deadline(self, mode: configs.Mode):
         pass
 
     def get_computation_time(self, mode: configs.Mode):
         pass
+
+    def calculate(self):
+        self.spent_calculation_time += 1
+
+    def advanced_forward_job(self):
+        self.current_job += 1
+        self.spent_calculation_time = 0
+
+    def is_finished(self, mode: configs.Mode):
+        if self.get_computation_time(mode) == self.spent_calculation_time:
+            return True
+
+    def is_active(self, current):
+        if self.current_job * self.period > current:
+            return True
