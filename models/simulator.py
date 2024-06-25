@@ -2,12 +2,15 @@ import math
 from typing import List
 
 import configs
-from models import HighCriticalityTask, LowCriticalityTask
+from models import HighCriticalityTask, LowCriticalityTask, Resource
 
 
 class Simulator:
-    def __init__(self):
+    def __init__(self, high_criticality_tasks, low_criticality_tasks, resources):
         self.mode = configs.Mode.NORMAL
+        self.high_criticality_tasks = high_criticality_tasks
+        self.low_criticality_tasks = low_criticality_tasks
+        self.resources = resources
         self.high_criticality_queue: List[HighCriticalityTask] = []
         self.low_criticality_queue: List[LowCriticalityTask] = []
         self.current_time = 0
