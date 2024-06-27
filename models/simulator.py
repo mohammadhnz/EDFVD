@@ -31,17 +31,21 @@ class Simulator:
 
     def execute(self):
         self._assign_to_core()
-
-        while self.current_time < 10 ** 4:
-            self._update_system_preemption_level()
-            self._update_mode()
-            self._handle_done_tasks()
-            self._disable_low_critical_tasks_in_overrun()
-            self._scheduled_tasks()
-            self._advance_forward_tasks()
-            self.current_time += 1
-
-        return sum(core.wfd for core in self.currently_assigned_tasks.keys())
+        total_usage_of_cores = 0
+        failed = False
+        try:
+            while self.current_time < 10 ** 5:
+                self._update_system_preemption_level()
+                self._update_mode()
+                self._handle_done_tasks()
+                self._disable_low_critical_tasks_in_overrun()
+                self._scheduled_tasks()
+                self._advance_forward_tasks()
+                self.current_time += 1
+                total_usage_of_cores += sum([(1 if task is not None else 0) for _, task in self.currently_assigned_tasks.items()])
+        except Exception:
+            failed = True
+        return total_usage_of_cores / (self.current_time * self.cpu_count), failed
 
     def _scheduled_tasks(self):
         for core, currently_assigned_task in self.currently_assigned_tasks.items():
