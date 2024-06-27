@@ -1,4 +1,5 @@
 import math
+from fractions import Fraction
 from typing import List
 
 import configs
@@ -26,26 +27,32 @@ class Simulator:
         for low_criticality_task in self.low_criticality_tasks:
             u_lo_lo += low_criticality_task.computation_time / low_criticality_task.period
         edf_vd_x = u_lo_hi / (1 - u_lo_lo)
-        return round(edf_vd_x, 2)
+        return round(edf_vd_x, 4)
 
     def execute(self):
+        self._assign_to_core()
+
         while self.current_time < 10 ** 4:
             self._update_system_preemption_level()
             self._update_mode()
             self._handle_done_tasks()
-            tasks = self._get_scheduled_tasks()
-            self.assign_to_core(tasks)
+            self._disable_low_critical_tasks_in_overrun()
+            self._scheduled_tasks()
+            self._advance_forward_tasks()
             self.current_time += 1
+
         return sum(core.wfd for core in self.currently_assigned_tasks.keys())
 
-    def _get_scheduled_tasks(self):
-        tasks = self._get_tasks_by_deadline_ordering()
-        tasks = list(
-            filter(
-                lambda task: task.get_preemption_level(self.srp_table) < self.system_preemption_level, tasks
+    def _scheduled_tasks(self):
+        for core, currently_assigned_task in self.currently_assigned_tasks.items():
+            tasks = self._get_tasks_by_deadline_ordering(core)
+            tasks = list(
+                filter(
+                    lambda task: task.get_preemption_level(self.srp_table) < self.system_preemption_level, tasks
+                )
             )
-        )
-        return tasks
+            if tasks:
+                self.currently_assigned_tasks[core] = tasks[0]
 
     def _handle_done_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
@@ -63,26 +70,30 @@ class Simulator:
                 task.advanced_forward_job()
                 # print("Missed deadline", task)
 
-    def _get_tasks_by_deadline_ordering(self):
+    def _get_tasks_by_deadline_ordering(self, core):
         high_criticality_queue = list(
-            filter(lambda task: task.is_active(self.current_time), self.high_criticality_tasks)
+            filter(
+                lambda task: task.is_active(self.current_time),
+                [t for t in core.task_set if isinstance(t, HighCriticalityTask)]
+            )
         )
         low_criticality_queue = list(
-            filter(lambda task: task.is_active(self.current_time), self.low_criticality_tasks)
+            filter(
+                lambda task: task.is_active(self.current_time),
+                [t for t in core.task_set if isinstance(t, LowCriticalityTask)]
+            )
         )
         if self.mode == configs.Mode.NORMAL:
             return sorted(high_criticality_queue + low_criticality_queue, key=lambda task: task.get_deadline(self.mode))
         return sorted(high_criticality_queue, key=lambda task: task.get_deadline(self.mode))
 
-    def _is_task_eligible_by_msrp(self, task):
-        return True
-
-    def assign_to_core(self, tasks):
-        self._disable_low_critical_tasks_in_overrun()
-
-        self._assign_scheduled_tasks(tasks)
-
-        self._advance_forward_tasks()
+    def _assign_to_core(self):
+        for task in self.high_criticality_tasks + self.low_criticality_tasks:
+            usable_cores = list(self.currently_assigned_tasks.keys())
+            usable_cores = sorted(usable_cores, key=lambda core: self._calculate_congestion(core, task), reverse=True)
+            usable_cores = [core for core in usable_cores if Fraction(task.get_utilization()) <= Fraction(core.utilization - core.wfd)]
+            core = usable_cores[0]
+            core.add_task(task)
 
     def _disable_low_critical_tasks_in_overrun(self):
         if self.mode != configs.Mode.OVERRUN:
@@ -92,26 +103,6 @@ class Simulator:
                 continue
             if isinstance(task, LowCriticalityTask):
                 self.currently_assigned_tasks[core] = None
-
-    def _assign_scheduled_tasks(self, tasks):
-        not_assigned_tasks = []
-        currently_assigned_tasks = list(self.currently_assigned_tasks.values())
-        for task in tasks:
-            if task not in currently_assigned_tasks:
-                not_assigned_tasks.append(task)
-
-        for task in not_assigned_tasks:
-            usable_cores = []
-            for core, cr_task in self.currently_assigned_tasks.items():
-                if not cr_task:
-                    usable_cores.append(core)
-                elif task.get_deadline(self.mode) < cr_task.get_deadline(self.mode):
-                    usable_cores.append(core)
-            usable_cores = sorted(usable_cores, key=lambda core: self._calculate_congestion(core, task), reverse=True)
-            usable_cores = [core for core in usable_cores if task.get_utilization() <= core.utilization - core.wfd]
-            if usable_cores:
-                self.currently_assigned_tasks[usable_cores[0]] = task
-                usable_cores[0].add_task(task)
 
     def _advance_forward_tasks(self):
         for core, task in self.currently_assigned_tasks.items():

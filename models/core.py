@@ -6,22 +6,17 @@ from models import BaseTask
 
 class Core:
     def __init__(self, utilization):
-        self.task_history = list()
+        self.task_set = list()
         self.resource_congestion = defaultdict(float)
         self.current_task: Union[BaseTask, None] = None
         self.utilization = utilization
 
     @property
     def wfd(self):
-        return sum([task.get_utilization() for task in self.task_history])
+        return sum([task.get_utilization() for task in self.task_set])
 
     def add_task(self, task: BaseTask):
-        self.current_task = task
-        self.task_history.append(task)
+        for resource, count in task.resource_demands.items():
+            self.resource_congestion[resource] += count
 
-    def advance_forward(self, mode):
-        if not self.current_task:
-            return
-        for resource, count in self.current_task.resource_demands.items():
-            self.resource_congestion[resource] += count / self.current_task.get_computation_time(mode)
-
+        self.task_set.append(task)

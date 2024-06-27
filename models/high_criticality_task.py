@@ -5,8 +5,8 @@ from . import BaseTask
 
 
 class HighCriticalityTask(BaseTask):
-    def __init__(self, little_computation_time: int, big_computation_time: int, period: int):
-        super(HighCriticalityTask, self).__init__(period, configs.CriticalityValues.HIGH)
+    def __init__(self, little_computation_time: int, big_computation_time: int, period: int, utilization: float):
+        super(HighCriticalityTask, self).__init__(period, configs.CriticalityValues.HIGH, utilization)
         self.little_computation_time = little_computation_time
         self.big_computation_time = big_computation_time
         self.period = period

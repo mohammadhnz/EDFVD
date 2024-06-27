@@ -16,17 +16,19 @@ def generate_task(core_utilization, count_of_cores, count_of_tasks, ratio) -> (L
 
     hc_tasks = []
     for u in hc_utilization:
+        # u = float(format(u, ".3f"))
         period = random.randint(10 ** 4, 10 ** 5)
         little_computation_time = math.ceil(u * period)
         big_computation_time = random.randint(little_computation_time, 2 * little_computation_time)
-        hc_task = HighCriticalityTask(little_computation_time, big_computation_time, period)
+        hc_task = HighCriticalityTask(little_computation_time, big_computation_time, period, u)
         hc_tasks.append(hc_task)
 
     lc_tasks = []
     for u in lc_utilization:
+        # u = float(format(u, ".3f"))
         period = random.randint(10 ** 4, 10 ** 5)
         computation_time = math.ceil(u * period)
-        lc_task = LowCriticalityTask(computation_time, period)
+        lc_task = LowCriticalityTask(computation_time, period, u)
         lc_tasks.append(lc_task)
 
     return hc_tasks, lc_tasks

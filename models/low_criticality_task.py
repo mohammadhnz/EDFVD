@@ -3,8 +3,8 @@ from . import BaseTask
 
 
 class LowCriticalityTask(BaseTask):
-    def __init__(self, computation_time: int, period: int):
-        super(LowCriticalityTask, self).__init__(period, configs.CriticalityValues.LOW)
+    def __init__(self, computation_time: int, period: int, utilization: float):
+        super(LowCriticalityTask, self).__init__(period, configs.CriticalityValues.LOW, utilization)
         self.computation_time = computation_time
 
     def get_deadline(self, mode: configs.Mode):

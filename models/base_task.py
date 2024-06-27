@@ -1,19 +1,21 @@
 import json
+import math
 
 import configs
 
 
 class BaseTask:
-    def __init__(self, period: int, criticality: configs.CriticalityValues):
+    def __init__(self, period: int, criticality: configs.CriticalityValues, utilization: float):
         self.period = period
         self.criticality = criticality
         self.resource_demands = dict()
         self.deadline = None
         self.current_job = 0
         self.spent_calculation_time = 0
+        self.utilization = utilization
 
     def get_utilization(self):
-        return self.get_computation_time(configs.Mode.NORMAL) / self.period
+        return self.utilization
 
     def get_deadline(self, mode: configs.Mode) -> int:
         pass
@@ -40,7 +42,7 @@ class BaseTask:
             return True
 
     def get_preemption_level(self, srp_table):
-        return min([srp_table[resource][resource.capacity - count] for resource, count in self.resource_demands.items() if count > 0])
+        return min([srp_table[resource][resource.capacity - count] for resource, count in self.resource_demands.items() if count > 0] + [math.inf])
 
     def are_resources_available(self):
         return all([
