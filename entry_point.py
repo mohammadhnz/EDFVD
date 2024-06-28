@@ -24,7 +24,7 @@ def initialize():
         count_of_resources = count_of_cores
         resources = generate_resources(count_of_resources)
 
-        for j in range(10):
+        for j in range(50):
             # Assuming generate_task, generate_resources, add_resource_usage, Core, Simulator are defined properly
             hc_tasks, lc_tasks = generate_task(core_utilization, count_of_cores, count_of_tasks, ratio)
             hc_tasks, lc_tasks = add_resource_usage(hc_tasks, lc_tasks, resources)
@@ -41,7 +41,7 @@ def initialize():
         # Store data for plotting
         average_utilization_per_file = sum(total_average_utilizations) / len(total_average_utilizations) if len(total_average_utilizations) > 0 else 0
         average_utilizations_per_file.append(average_utilization_per_file)
-        mapping_feasibility = succeed / 10
+        mapping_feasibility = succeed / 50
         mapping_feasibilities.append(mapping_feasibility)
         print(f"File {i}: Mapping Feasibility = {mapping_feasibility}")
 

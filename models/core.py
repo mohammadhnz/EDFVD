@@ -9,10 +9,10 @@ class Core:
         self.task_set = list()
         self.resource_congestion = defaultdict(float)
         self.current_task: Union[BaseTask, None] = None
-        self.utilization = utilization
+        self.utilization = utilization + 0.000025
 
     @property
-    def wfd(self):
+    def currently_using_resources(self):
         return sum([task.get_utilization() for task in self.task_set])
 
     def add_task(self, task: BaseTask):

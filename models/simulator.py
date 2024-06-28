@@ -17,6 +17,7 @@ class Simulator:
         self.edf_vd_x = self._get_edf_vd_x()
         self._update_high_critical_tasks()
         self.currently_assigned_tasks = {core: None for core in cores}
+        self.cores = cores
         self.srp_table = self._generate_srp_table()
         self.system_preemption_level = math.inf
 
@@ -30,7 +31,8 @@ class Simulator:
         return round(edf_vd_x, 4)
 
     def execute(self):
-        self._assign_to_core()
+        self._assign_to_core_with_wfd()
+        return 0, False
         total_usage_of_cores = 0
         failed = False
         try:
@@ -95,9 +97,27 @@ class Simulator:
         for task in self.high_criticality_tasks + self.low_criticality_tasks:
             usable_cores = list(self.currently_assigned_tasks.keys())
             usable_cores = sorted(usable_cores, key=lambda core: self._calculate_congestion(core, task), reverse=True)
-            usable_cores = [core for core in usable_cores if Fraction(task.get_utilization()) <= Fraction(core.utilization - core.wfd)]
+            usable_cores = [core for core in usable_cores if Fraction(task.get_utilization()) <= Fraction(core.utilization - core.currently_using_resources)]
             core = usable_cores[0]
             core.add_task(task)
+
+    def _assign_to_core_with_wfd(self):
+        tasks = self.high_criticality_tasks + self.low_criticality_tasks
+        tasks = sorted(tasks, key=lambda task: task.get_utilization(), reverse=True)
+        counter = 0
+        for task in tasks:
+
+            usable_cores = self.cores
+            usable_cores = sorted(
+                usable_cores, key=lambda core: Fraction(core.utilization) - Fraction(core.currently_using_resources), reverse=True
+            )
+            usable_cores = [
+                core for core in usable_cores
+                if task.get_utilization() < core.utilization - core.currently_using_resources
+            ]
+            best_fit_core = usable_cores[0]
+            best_fit_core.add_task(task)
+            counter += 1
 
     def _disable_low_critical_tasks_in_overrun(self):
         if self.mode != configs.Mode.OVERRUN:
