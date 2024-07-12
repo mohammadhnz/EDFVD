@@ -8,6 +8,9 @@ from models.core import Core
 
 import matplotlib.pyplot as plt
 
+from models.exceptions import PanicModeException
+
+
 def initialize():
     average_utilizations_per_file = []  # Stores average utilizations for each file
     mapping_feasibilities = []          # Stores mapping feasibility for each file
@@ -35,7 +38,11 @@ def initialize():
                 total_average_utilizations.append(average_utilization)
                 if not failed:
                     succeed += 1
-            except Exception:
+            except ZeroDivisionError:
+                failed += 1
+            except IndexError:
+                failed += 1
+            except PanicModeException:
                 failed += 1
 
         # Store data for plotting
