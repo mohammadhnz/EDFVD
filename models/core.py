@@ -10,7 +10,7 @@ class Core:
         self.resource_congestion = defaultdict(float)
         self.current_task: Union[BaseTask, None] = None
         self.utilization = utilization
-
+        self.is_busy_waiting = False
     @property
     def wfd(self):
         return sum([task.get_utilization() for task in self.task_set])
@@ -20,3 +20,9 @@ class Core:
             self.resource_congestion[resource] += count
 
         self.task_set.append(task)
+
+    def busy_wait(self):
+        self.is_busy_waiting = True
+
+    def run(self):
+        self.is_busy_waiting = False

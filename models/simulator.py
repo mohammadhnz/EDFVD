@@ -1,9 +1,12 @@
 import math
+from collections import defaultdict
 from fractions import Fraction
 from typing import List
 
 import configs
 from models import HighCriticalityTask, LowCriticalityTask, BaseTask
+from models.core import Core
+from models.exceptions import PanicModeException
 
 
 class Simulator:
@@ -18,7 +21,7 @@ class Simulator:
         self._update_high_critical_tasks()
         self.currently_assigned_tasks = {core: None for core in cores}
         self.srp_table = self._generate_srp_table()
-        self.system_preemption_level = math.inf
+        self.system_ceiling = math.inf
 
     def _get_edf_vd_x(self):
         u_lo_lo, u_lo_hi = 0, 0
@@ -35,44 +38,52 @@ class Simulator:
         failed = False
         try:
             while self.current_time < 10 ** 5:
-                self._update_system_preemption_level()
+                self._update_system_ceiling()
                 self._update_mode()
                 self._handle_done_tasks()
                 self._disable_low_critical_tasks_in_overrun()
                 self._scheduled_tasks()
+                self._update_busy_waiting_cores()
                 self._advance_forward_tasks()
                 self.current_time += 1
-                total_usage_of_cores += sum([(1 if task is not None else 0) for _, task in self.currently_assigned_tasks.items()])
-        except Exception:
+                total_usage_of_cores += sum(
+                    [
+                        (1 if task is not None else 0) for core, task in self.currently_assigned_tasks.items()
+                        if not core.is_busy_waiting
+                    ]
+                )
+        except IndexError:
             failed = True
         return total_usage_of_cores / (self.current_time * self.cpu_count), failed
 
     def _scheduled_tasks(self):
         for core, currently_assigned_task in self.currently_assigned_tasks.items():
+            if core.is_busy_waiting:
+                continue
             tasks = self._get_tasks_by_deadline_ordering(core)
             tasks = list(
                 filter(
-                    lambda task: task.get_preemption_level(self.srp_table) < self.system_preemption_level, tasks
+                    lambda task: task.get_preemption_level(self.srp_table) < self.system_ceiling, tasks
                 )
             )
             if tasks:
-                self.currently_assigned_tasks[core] = tasks[0]
+                task_to_schedule = tasks[0]
+                self.currently_assigned_tasks[core] = task_to_schedule
+                if not self._resources_are_available(task_to_schedule, core):
+                    core.busy_wait()
+                else:
+                    core.run()
 
     def _handle_done_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
             if isinstance(task, BaseTask) and task.is_finished(self.mode):
-                # print("Done task", "current_job", str(task.current_job), task)
                 task.advanced_forward_job()
                 self.currently_assigned_tasks[core] = None
             elif isinstance(task, BaseTask) and task.is_deadline_missed(self.mode, self.current_time):
                 if isinstance(task, HighCriticalityTask):
-                    # print(self.current_time)
-                    # print(self.mode)
-                    # print(task.virtual_deadline)
-                    raise Exception('Panic Mode')
+                    raise PanicModeException()
                 self.currently_assigned_tasks[core] = None
                 task.advanced_forward_job()
-                # print("Missed deadline", task)
 
     def _get_tasks_by_deadline_ordering(self, core):
         high_criticality_queue = list(
@@ -110,7 +121,7 @@ class Simulator:
 
     def _advance_forward_tasks(self):
         for core, task in self.currently_assigned_tasks.items():
-            if not task:
+            if core.is_busy_waiting or not task:
                 continue
             task.calculate()
 
@@ -135,11 +146,37 @@ class Simulator:
             ]
         return srp_table
 
-    def _update_system_preemption_level(self):
-        min(
+    def _update_system_ceiling(self):
+        self.system_ceiling = min(
             [task.get_preemption_level(self.srp_table) for _, task in self.currently_assigned_tasks.items() if task] + [math.inf]
         )
+        for core, _ in self.currently_assigned_tasks.items():
+            if core.is_busy_waiting:
+                self.system_ceiling = -1
+                return
 
-    def _calculate_congestion(self, core, task):
+    def _calculate_congestion(self, core, task) -> float:
         resources = [resource for resource, count in task.resource_demands.items() if count > 0]
         return sum([core.resource_congestion[resource] for resource in resources])
+
+    def _resources_are_available(self, task_to_schedule: BaseTask, target_core: Core) -> bool:
+        total_usage = defaultdict(int)
+        if not task_to_schedule:
+            return True
+        for core, task in self.currently_assigned_tasks.items():
+            if core == target_core or not task:
+                continue
+            for resource, demand in task.resource_demands.items():
+                total_usage[resource] += demand
+
+        for resource, demand in task_to_schedule.resource_demands.items():
+            if total_usage[resource] + demand > resource.capacity:
+                return False
+        return True
+
+    def _update_busy_waiting_cores(self):
+        for core, task in self.currently_assigned_tasks.items():
+            if not core.is_busy_waiting:
+                continue
+            if self._resources_are_available(task, core):
+                core.run()
